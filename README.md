@@ -23,6 +23,12 @@ Alternatively, use the built-in extension browser to find the _AsciiDoc_ extensi
 
 The full documentation lives at [docs.asciidoctor.org/vscode-extension](https://docs.asciidoctor.org/vscode-extension/).
 
+In the preview, Ctrl+Click (or Cmd+Click on macOS) a link to another AsciiDoc
+document to open its preview in a separate tab in the same editor group. The
+linked preview is locked to its document, and the original preview stays open.
+Links containing an anchor scroll to that section. An ordinary click continues
+to follow the `asciidoc.preview.openLinksToAsciidocFiles` setting.
+
 ## Issues
 
 Found a bug or have a question? Please check the [existing issues](https://github.com/asciidoctor/asciidoctor-vscode/issues) first, then open a new one. See [Get help](https://docs.asciidoctor.org/vscode-extension/get-help/) for what to include.

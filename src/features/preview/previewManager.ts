@@ -51,7 +51,11 @@ export class AsciidocPreviewManager implements vscode.WebviewPanelSerializer {
     }
   }
 
-  public preview(resource: vscode.Uri, previewSettings: PreviewSettings): void {
+  public preview(
+    resource: vscode.Uri,
+    previewSettings: PreviewSettings,
+    fragment?: string,
+  ): void {
     let preview = this.getExistingPreview(resource, previewSettings)
     if (preview) {
       preview.reveal(previewSettings.previewColumn)
@@ -59,7 +63,7 @@ export class AsciidocPreviewManager implements vscode.WebviewPanelSerializer {
       preview = this.createNewPreview(resource, previewSettings)
     }
 
-    preview.update(resource)
+    preview.update(resource, fragment)
   }
 
   public get activePreviewResource() {
@@ -137,6 +141,20 @@ export class AsciidocPreviewManager implements vscode.WebviewPanelSerializer {
 
   private registerPreview(preview: AsciidocPreview): AsciidocPreview {
     this._previews.push(preview)
+
+    preview.onDidRequestOpenPreview(({ resource, fragment }) => {
+      this.preview(
+        resource,
+        {
+          resourceColumn: preview.resourceColumn,
+          previewColumn: preview.position ?? vscode.ViewColumn.Active,
+          // Locked previews can coexist in one group and stay on their linked
+          // document when the user switches source editors.
+          locked: true,
+        },
+        fragment,
+      )
+    })
 
     preview.onDispose(() => {
       const existing = this._previews.indexOf(preview)
