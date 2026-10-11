@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Features
+
+* Open linked AsciiDoc previews in a separate tab in the same editor group with Ctrl+Click (Cmd+Click on macOS), preserving the original preview and navigating to link anchors.
+
 ### Bug fixes
 
 * Keep the inline formatting toggles (`asciidoc.toggleBold`, `asciidoc.toggleItalic`, `asciidoc.toggleMonospace`) strictly limited to AsciiDoc documents: they are hidden from the Command Palette in other languages and now leave the document untouched when they are invoked outside AsciiDoc (#1199)

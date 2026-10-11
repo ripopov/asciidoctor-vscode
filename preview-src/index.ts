@@ -244,7 +244,10 @@ document.addEventListener(
           !/^[a-z-]+:\/\//i.test(hrefText) ||
           hrefText.startsWith('file:///')
         ) {
-          messaging.postMessage('clickLink', { href: hrefText })
+          messaging.postMessage('clickLink', {
+            href: hrefText,
+            openInNewTab: event.ctrlKey || event.metaKey,
+          })
           event.preventDefault()
           event.stopPropagation()
           return

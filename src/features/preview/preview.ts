@@ -228,7 +228,10 @@ export class AsciidocPreview
             break
 
           case 'clickLink':
-            this.onDidClickPreviewLink(e.body.href)
+            this.onDidClickPreviewLink(
+              e.body.href,
+              e.body.openInNewTab === true,
+            )
             break
 
           case 'showPreviewSecuritySelector':
@@ -324,6 +327,13 @@ export class AsciidocPreview
     new vscode.EventEmitter<vscode.WebviewPanelOnDidChangeViewStateEvent>()
   public readonly onDidChangeViewState = this._onDidChangeViewStateEmitter.event
 
+  private readonly _onDidRequestOpenPreviewEmitter = new vscode.EventEmitter<{
+    resource: vscode.Uri
+    fragment?: string
+  }>()
+  public readonly onDidRequestOpenPreview =
+    this._onDidRequestOpenPreviewEmitter.event
+
   public get resource(): vscode.Uri {
     return this._resource
   }
@@ -349,6 +359,7 @@ export class AsciidocPreview
 
     this._onDisposeEmitter.dispose()
     this._onDidChangeViewStateEmitter.dispose()
+    this._onDidRequestOpenPreviewEmitter.dispose()
     this.editor.dispose()
 
     disposeAll(this.disposables)
@@ -357,8 +368,18 @@ export class AsciidocPreview
     this.throttleTimer = undefined
   }
 
-  // This method is invoked evrytime there is a document update
-  public update(resource: vscode.Uri) {
+  // This method is invoked every time there is a document update.
+  public update(resource: vscode.Uri, fragment?: string) {
+    if (fragment) {
+      this.pendingScrollToFragment = fragment
+      // An already-open target may have unchanged content. Reload it so the
+      // webview receives the requested anchor as part of its initial settings.
+      this.needsFullReload = true
+      this.forceUpdate = true
+      clearTimeout(this.throttleTimer)
+      this.throttleTimer = undefined
+    }
+
     const editor = vscode.window.activeTextEditor
     if (editor && editor.document.uri.fsPath === resource.fsPath) {
       this.line = getVisibleLine(editor)
@@ -367,6 +388,7 @@ export class AsciidocPreview
     // If we have changed resources, cancel any pending updates
     const isResourceChange = resource.fsPath !== this._resource.fsPath
     if (isResourceChange) {
+      this.pendingScrollToFragment = fragment
       clearTimeout(this.throttleTimer)
       this.throttleTimer = undefined
       // A different document means a different shell: force a full reload.
@@ -704,19 +726,25 @@ export class AsciidocPreview
     }
   }
 
-  private async onDidClickPreviewLink(href: string) {
+  private async onDidClickPreviewLink(href: string, openInNewTab = false) {
     const targetResource = this.resolveDocumentLink(href)
     const openLinks = this.config.get<string>(
       'preview.openLinksToAsciidocFiles',
       'inPreview',
     )
-    if (openLinks === 'inPreview') {
+    if (openInNewTab || openLinks === 'inPreview') {
       const asciidocLink = await resolveLinkToAsciidocFile(targetResource.path)
       if (asciidocLink) {
+        if (openInNewTab) {
+          this._onDidRequestOpenPreviewEmitter.fire({
+            resource: asciidocLink,
+            fragment: targetResource.fragment || undefined,
+          })
+          return
+        }
         // Opening another document in place forces a full reload; carry the
         // fragment so the new render scrolls to the referenced anchor.
-        this.pendingScrollToFragment = targetResource.fragment || undefined
-        this.update(asciidocLink)
+        this.update(asciidocLink, targetResource.fragment || undefined)
         return
       }
     }
